@@ -12,4 +12,6 @@ public interface DataService {
     Map<String, Integer> sendNotificationToAll(String title, String body, String description, List<Map<String, String>> projectStatusList) throws IOException, InterruptedException;
 
     void saveAndSendNotification(Map<String, Object> payload) throws Exception;
+
+    List<Map<String, Object>> getAllNotifications();
 }

@@ -22,7 +22,7 @@ public class DataController {
 
     public DataController(
             UserService userService, DataService dataService
-            ) {
+    ) {
         this.userService = userService;
         this.dataService = dataService;
     }
@@ -32,45 +32,23 @@ public class DataController {
         return userService.getAllUsers(hours);
     }
 
-//    @PostMapping("/sentNotification")
-//    public String sendNotification(
-//            @RequestParam(value = "type") String type,
-//            @RequestParam(value = "message") String message,
-//            @RequestParam(value = "latitude", required = false) Double latitude,
-//            @RequestParam(value = "longitude", required = false) Double longitude
-//            ) throws Exception {
-//        String timestamp = String.valueOf(System.currentTimeMillis()); // Current timestamp
-//
-//        // Create a new notification object
-//        Map<String, Object> notification = new HashMap<>();
-//        notification.put("type", type);
-//        notification.put("message", message);
-//        notification.put("timestamp", timestamp);
-//        notification.put("latitude", latitude);  // Can be null
-//        notification.put("longitude", longitude); // Can be null
-//
-//
-//        // Call the sendNotificationToAll method from the service
-////        Map<String, Integer> result = dataService.sendNotificationToAll(title, body, description, projectStatusList);
-//
-//        // Return a success/failure message based on result
-////        if (result.get("failure") == 0) {
-////            return "Notification sent successfully!";
-////        } else {
-////            return "Failed to send notification.";
-////        }
-//        return null;
 
+    @PostMapping("/sendNotification")
+    public ResponseEntity<String> sendNotification(@RequestBody Map<String, Object> payload) {
+        try {
+            dataService.saveAndSendNotification(payload);
+            return ResponseEntity.ok("Notification sent successfully!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Failed to send notification.");
+        }
 
-@PostMapping("/sendNotification")
-public ResponseEntity<String> sendNotification(@RequestBody Map<String, Object> payload) {
-    try {
-        dataService.saveAndSendNotification(payload);
-        return ResponseEntity.ok("Notification sent successfully!");
-    } catch (Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.status(500).body("Failed to send notification.");
     }
 
+
+    @GetMapping("/notifications")
+    public ResponseEntity<List<Map<String, Object>>> getAllNotifications() {
+        List<Map<String, Object>> notifications = dataService.getAllNotifications();
+        return ResponseEntity.ok(notifications);
     }
 }

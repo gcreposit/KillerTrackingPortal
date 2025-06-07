@@ -236,6 +236,9 @@
     let polylines = [];
     let startMarkers = [];
     let stompClient = null;
+    let destinationMarker = null;
+    let routePolylines = [];
+    let directionsService = null;
 
     function initMap() {
         map = new google.maps.Map(document.getElementById("map"), {
@@ -243,6 +246,8 @@
             center: {lat: 26.8467, lng: 80.9462},
         });
         fetchUsers(2);  // Fetch users when the page loads
+        fetchMcNotifications(); // <-- call here
+
     }
 
     function fetchUsers(hours) {
@@ -254,6 +259,111 @@
                 plotUsersOnMap();
             })
             .catch(error => console.error('Error fetching user data:', error));
+    }
+
+    function fetchMcNotifications(){
+        // Fetch all notifications from your backend API
+        fetch('/data/notifications')
+            .then(response => response.json())
+            .then(data => {
+                // Check if 'data' is an array before calling filter
+                if (Array.isArray(data)) {
+                    console.log("Bhak mc",data); // Log the data to check the response structure
+
+                    // Find the latest "CC" notification
+                    const ccNotifications = data.filter(n => n.type === "CC");
+                    if (ccNotifications.length === 0) return;
+
+                    // Sort by timestamp (assuming Firestore timestamp is in n.timestamp)
+                    ccNotifications.sort((a, b) => {
+                        // If timestamp is a Firestore Timestamp object, convert to millis
+                        const ta = a.timestamp?.seconds ? a.timestamp.seconds : new Date(a.timestamp).getTime();
+                        const tb = b.timestamp?.seconds ? b.timestamp.seconds : new Date(b.timestamp).getTime();
+                        return tb - ta;
+                    });
+
+                    const latestCC = ccNotifications[0];
+                    const destLat = parseFloat(latestCC.latitude);
+                    const destLng = parseFloat(latestCC.longitude);
+                    plotDestinationAndRoutes(destLat, destLng); // Use your existing function
+                } else {
+                    console.error("Data is not an array:", data);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching notifications:", error);
+            });
+
+
+    }
+
+
+    function plotDestinationAndRoutes(destLat, destLng) {
+        // 2. Plot destination marker with "D" icon
+        if (destinationMarker) destinationMarker.setMap(null);
+        const dIcon = {
+            url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="orange"/><text x="16" y="22" font-size="18" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">D</text></svg>',
+            scaledSize: new google.maps.Size(32, 32)
+        };
+        destinationMarker = new google.maps.Marker({
+            position: {lat: destLat, lng: destLng},
+            map: map,
+            icon: dIcon,
+            title: "Destination"
+        });
+        map.setCenter({lat: destLat, lng: destLng});
+        map.setZoom(13);
+
+        // 3. Remove old polylines
+        routePolylines.forEach(poly => poly.setMap(null));
+        routePolylines = [];
+
+        // 4. For each user, calculate and draw route
+        directionsService = new google.maps.DirectionsService();
+        users.forEach(user => {
+            if (!user.locationHistory || user.locationHistory.length === 0) return;
+            const lastLoc = user.locationHistory[user.locationHistory.length - 1];
+            const userLatLng = {lat: lastLoc.latitude, lng: lastLoc.longitude};
+            const destLatLng = {lat: destLat, lng: destLng};
+
+            directionsService.route({
+                origin: userLatLng,
+                destination: destLatLng,
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                console.log("result", result);
+                console.log("status mc", status);
+                if (status === "OK") {
+                    // 5. Draw polyline in light green
+                    const routePath = result.routes[0].overview_path;
+                    const polyline = new google.maps.Polyline({
+                        path: routePath,
+                        geodesic: true,
+                        strokeColor: "#90ee90", // light green
+                        strokeOpacity: 0.9,
+                        strokeWeight: 5,
+                        map: map
+                    });
+                    routePolylines.push(polyline);
+
+                    // 6. On polyline click, show info window with time/distance
+                    const leg = result.routes[0].legs[0];
+                    const infoContent = `
+                    <div>
+                        <b>User:</b> ${user.name}<br>
+                        <b>Distance:</b> ${leg.distance.text}<br>
+                        <b>Estimated Time:</b> ${leg.duration.text}
+                    </div>
+                `;
+                    const infoWindow = new google.maps.InfoWindow();
+                    polyline.addListener('click', function(e) {
+                        infoWindow.setContent(infoContent);
+                        infoWindow.setPosition(e.latLng);
+                        infoWindow.open(map);
+                    });
+                }
+            });
+        });
     }
 
     function displayUsersOnTable() {
@@ -397,6 +507,8 @@
                 updateUserInList(updatedUser);
                 displayUsersOnTable();
                 plotUsersOnMap();
+                fetchMcNotifications(); // <-- call here
+
             });
         });
     }
@@ -412,6 +524,12 @@
             users.push(updatedUser);
         }
     }
+
+
+
+
+
+
 </script>
 
 

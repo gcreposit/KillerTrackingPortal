@@ -4,8 +4,11 @@ import com.example.killertrackingportal.service.DataService;
 import com.example.killertrackingportal.service.FirebaseAccessTokenService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +34,17 @@ public class DataServiceImpl implements DataService {
     private final FirebaseAccessTokenService firebaseAccessTokenService;
 
     private HttpClient httpClient;
+
+    private final Firestore firestore;
+
     @PostConstruct
     public void init() {
         this.httpClient = HttpClient.newHttpClient();
     }
-    public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService ){
+
+    public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService, Firestore firestore) {
         this.firebaseAccessTokenService = firebaseAccessTokenService;
+        this.firestore = firestore;
 
     }
 
@@ -107,10 +116,8 @@ public class DataServiceImpl implements DataService {
         return result;
     }
 
-    @Autowired
-    private Firestore firestore;
 
-
+    //------------PART - 1 This method saves the notification to Firestore and sends a push notification to all subscribers--------------------------
     public void saveAndSendNotification(Map<String, Object> payload) throws Exception {
         String type = (String) payload.get("type");
         String message = (String) payload.get("message");
@@ -136,11 +143,28 @@ public class DataServiceImpl implements DataService {
         firestore.collection("allNotifications").add(doc).get();
 
         // Send push notification
-        saveAndSendNotification(title, message, doc);
+        saveAndSendPushNotification(title, message, doc);
     }
 
+    @Override
+    public List<Map<String, Object>> getAllNotifications() {
+        List<Map<String, Object>> notificationList = new ArrayList<>();
+        try {
+            ApiFuture<QuerySnapshot> future = firestore.collection("allNotifications").get();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+            for (QueryDocumentSnapshot doc : documents) {
+                Map<String, Object> data = doc.getData();
+                data.put("id", doc.getId());
+                notificationList.add(data);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return notificationList;
+    }
 
-    private void saveAndSendNotification(String title, String message, Map<String, Object> data) throws Exception {
+    //------------PART - 2 This method saves the notification to Firestore and sends a push notification to all subscribers----------------------------------------
+    private void saveAndSendPushNotification(String title, String message, Map<String, Object> data) throws Exception {
         String topic = "all";
         String accessToken = firebaseAccessTokenService.getAccessToken();
 
@@ -183,5 +207,5 @@ public class DataServiceImpl implements DataService {
         HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
     }
 }
-    //---------------------------ENDED This Method is to sendNotification To all the Subscribers---------------------
+//---------------------------ENDED This Method is to sendNotification To all the Subscribers---------------------
 
