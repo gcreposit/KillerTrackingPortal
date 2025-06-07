@@ -54,8 +54,10 @@
             bottom: 20px;
             right: 20px;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            gap: 10px; /* Space between buttons */
+            flex-wrap: wrap; /* Allow the buttons to wrap when necessary */
+            display: none; /* Initially hidden */
+
         }
 
         .hour-button {
@@ -325,6 +327,8 @@
             const lastLoc = user.locationHistory[user.locationHistory.length - 1];
             const userLatLng = {lat: lastLoc.latitude, lng: lastLoc.longitude};
             const destLatLng = {lat: destLat, lng: destLng};
+            console.log("ye rha user ka lat lng", userLatLng);
+            console.log("ye rha destination ka lat lng", destLatLng);
 
             directionsService.route({
                 origin: userLatLng,
@@ -339,7 +343,7 @@
                     const polyline = new google.maps.Polyline({
                         path: routePath,
                         geodesic: true,
-                        strokeColor: "#90ee90", // light green
+                        strokeColor: "#04400c", // light green
                         strokeOpacity: 0.9,
                         strokeWeight: 5,
                         map: map
@@ -489,7 +493,16 @@
 
     function toggleFilters() {
         const filters = document.getElementById("hourFilters");
-        filters.style.display = filters.style.display === "block" ? "none" : "block";
+        const toggleButton = document.querySelector(".fab");
+
+        // If the hour filters are currently visible, hide them and change button to "+"
+        if (filters.style.display === "flex") {
+            filters.style.display = "none";
+            toggleButton.innerHTML = "+"; // Change the button to "+"
+        } else {
+            filters.style.display = "flex";
+            toggleButton.innerHTML = "−"; // Change the button to "−"
+        }
     }
 
     // WebSocket Real-Time Update Section
