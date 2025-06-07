@@ -122,6 +122,23 @@
             text-align: center;
         }
 
+        /* Close Button Styles */
+        .close-btn {
+            background-color: #f44336; /* Red background */
+            color: white; /* White text */
+            padding: 10px 20px; /* Padding for the button */
+            border: none; /* Remove border */
+            border-radius: 5px; /* Rounded corners */
+            font-size: 16px; /* Font size */
+            cursor: pointer; /* Pointer cursor on hover */
+            transition: background-color 0.3s ease; /* Smooth background color transition */
+        }
+
+        /* Hover effect for the button */
+        .close-btn:hover {
+            background-color: #d32f2f; /* Darker red when hovered */
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             #map {
@@ -169,27 +186,33 @@
 
 
 <!-- Modal for Notifications -->
+<!-- Notification Modal -->
 <div id="notificationModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#fff; border-radius:12px; width:400px; max-width:90vw; padding:0; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div id="modalContent" style="background:#fff; border-radius:16px; width:600px; max-width:95vw; padding:0; box-shadow:0 8px 32px rgba(0,0,0,0.2); position:relative;">
+        <!-- Close Icon -->
+        <button onclick="closeModal()" style="position:absolute; top:18px; right:24px; background:none; border:none; color:#888; font-size:32px; cursor:pointer; z-index:2;">&times;</button>
         <div style="display:flex; border-bottom:1px solid #eee;">
-            <button id="tabIC" style="flex:1; padding:16px; background:#f5f5f5; border:none; border-radius:12px 0 0 0; font-weight:bold;">Information Centre</button>
-            <button id="tabCC" style="flex:1; padding:16px; background:#fff; border:none; border-radius:0 12px 0 0; font-weight:bold;">Command Centre</button>
+            <button id="tabIC" style="flex:1; padding:20px; background:#f5f5f5; border:none; border-radius:16px 0 0 0; font-weight:bold; font-size:18px;">Information Centre</button>
+            <button id="tabCC" style="flex:1; padding:20px; background:#fff; border:none; border-radius:0 16px 0 0; font-weight:bold; font-size:18px;">Command Centre</button>
         </div>
-        <div id="formIC" style="padding:24px;">
+        <div id="formIC" style="padding:32px;">
             <label style="font-weight:bold;">Enter message:</label>
-            <textarea id="icMessage" style="width:100%; margin-top:8px; border-radius:6px; border:1px solid #ccc; padding:8px;" rows="3"></textarea>
-            <button onclick="submitIC()" style="margin-top:16px; background:#007BFF; color:#fff; border:none; border-radius:6px; padding:10px 20px; width:100%; font-weight:bold;">Send Notification</button>
+            <textarea id="icMessage" style="width:100%; margin-top:8px; border-radius:8px; border:1px solid #ccc; padding:12px; font-size:16px;" rows="4"></textarea>
+            <button onclick="submitIC()" style="margin-top:24px; background:#007BFF; color:#fff; border:none; border-radius:8px; padding:14px 0; width:100%; font-weight:bold; font-size:16px;">Send Notification</button>
         </div>
-        <div id="formCC" style="display:none; padding:24px;">
+        <div id="formCC" style="display:none; padding:32px;">
             <label style="font-weight:bold;">Enter message:</label>
-            <textarea id="ccMessage" style="width:100%; margin-top:8px; border-radius:6px; border:1px solid #ccc; padding:8px;" rows="2"></textarea>
-            <div style="display:flex; gap:8px; margin-top:12px;">
-                <input id="latitude" type="number" step="any" placeholder="Latitude" style="flex:1; border-radius:6px; border:1px solid #ccc; padding:8px;">
-                <input id="longitude" type="number" step="any" placeholder="Longitude" style="flex:1; border-radius:6px; border:1px solid #ccc; padding:8px;">
+            <textarea id="ccMessage" style="width:100%; margin-top:8px; border-radius:8px; border:1px solid #ccc; padding:12px; font-size:16px;" rows="3"></textarea>
+            <div style="display:flex; gap:12px; margin-top:16px;">
+                <input id="latitude" type="number" step="any" placeholder="Latitude" style="flex:1; border-radius:8px; border:1px solid #ccc; padding:12px; font-size:16px;">
+                <input id="longitude" type="number" step="any" placeholder="Longitude" style="flex:1; border-radius:8px; border:1px solid #ccc; padding:12px; font-size:16px;">
             </div>
-            <button onclick="submitCC()" style="margin-top:16px; background:#28a745; color:#fff; border:none; border-radius:6px; padding:10px 20px; width:100%; font-weight:bold;">Send Command</button>
+            <button onclick="submitCC()" style="margin-top:24px; background:#28a745; color:#fff; border:none; border-radius:8px; padding:14px 0; width:100%; font-weight:bold; font-size:16px;">Send Command</button>
         </div>
-        <button onclick="closeModal()" style="background:none; border:none; color:#888; font-size:20px; position:absolute; top:10px; right:20px; cursor:pointer;">&times;</button>
+        <!-- Close Button at Bottom -->
+        <div style="padding:0 32px 32px 32px; text-align:right;">
+            <button onclick="closeModal()" style="background:#eee; color:#333; border:none; border-radius:6px; padding:10px 24px; font-size:15px; margin-top:8px;">Close</button>
+        </div>
     </div>
 </div>
 
@@ -200,6 +223,12 @@
         initMap();  // Initialize the map
         connectWebSocket();  // Connect to WebSocket for real-time updates
     };
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            closeModal();
+        }
+    });
 
     let map;
     let users = [];
@@ -397,6 +426,7 @@
     }
     document.getElementById('tabIC').onclick = function() { showTab('IC'); };
     document.getElementById('tabCC').onclick = function() { showTab('CC'); };
+
     function showTab(tab) {
         document.getElementById('formIC').style.display = tab === 'IC' ? 'block' : 'none';
         document.getElementById('formCC').style.display = tab === 'CC' ? 'block' : 'none';
