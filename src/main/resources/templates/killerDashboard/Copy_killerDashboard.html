@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Location Tracking</title>
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkyZ_KEJyO9abb8-TW96HaE-Uu_3q4IQw&callback=initMap" async defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/googlemaps/v3-utility-library/markerclusterer/src/markerclusterer.js"></script>
+    <style>
+        /* General styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Container for map and table */
+        #map {
+            height: 60vh;
+            width: 100%;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+            text-align: left;
+            padding: 12px 15px;
+        }
+
+        th {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Buttons and Filters */
+        #hourFilters {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hour-button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .hour-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            font-size: 24px;
+            transition: background-color 0.3s ease;
+        }
+
+        .fab:hover {
+            background-color: #0056b3;
+        }
+
+        /* Card for displaying user data on the map */
+        .user-info-card {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+        }
+
+        .user-info-card h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .user-info-card p {
+            color: #777;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #map {
+                height: 50vh;
+            }
+
+            .hour-button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            .user-info-card {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+<table id="userTable">
+    <thead>
+    <tr>
+        <th>S.No</th>
+        <th>UserName</th>
+        <th>Email</th>
+        <th>Tracking</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody id="userTableBody">
+    <!-- Table data will be inserted here -->
+    </tbody>
+</table>
+
+<div id="hourFilters"></div>
+
+<!-- Floating Button -->
+<button class="fab" onclick="toggleFilters()">+</button>
+
+<script>
+    // Remove the event listener and call createHourButtons() directly when the page loads
+    window.onload = function() {
+        createHourButtons(); // Create hour buttons when the page loads
+        initMap()
+    };
+
+    let map;
+    let users = []; // This will store all the user data
+    let markers = []; // To store markers for clearing them later
+    let clusterer; // To store the MarkerClusterer instance
+    let polylines = []; // Global array to store polyline references
+
+
+    // Initialize the map
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 10,
+            center: { lat: 26.8467, lng: 80.9462 }, // Initial center (e.g., Uttar Pradesh)
+        });
+
+        fetchUsers(2); // Fetch users when the page loads
+    }
+
+    // Fetch users and their location data
+    function fetchUsers(hours) {
+        fetch(`/data/get-users?hours=${hours}`)
+            .then(response => response.json())
+            .then(data => {
+                users = data; // Store user data
+                displayUsersOnTable(); // Update the table with users
+                plotUsersOnMap(); // Plot users' paths on the map
+            })
+            .catch(error => console.error('Error fetching user data:', error));
+    }
+
+    // Display users in a table
+    function displayUsersOnTable() {
+        const tableBody = document.getElementById('userTableBody');
+        tableBody.innerHTML = ''; // Clear the table before populating it
+
+        users.forEach((user, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.tracking ? 'Yes' : 'No'}</td>
+                <td>${user.tracking ? 'ACTIVE' : 'INACTIVE'}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+    let startMarkers = []; // At the top, global
+
+    function plotUsersOnMap() {
+        // Clear existing markers from map
+        markers.forEach(marker => marker.setMap(null));
+        markers = []; // Reset markers array
+
+        // Clear previous start markers
+        startMarkers.forEach(marker => marker.setMap(null));
+        startMarkers = [];
+        // Clear existing polylines from the map
+        polylines.forEach(polyline => polyline.setMap(null));
+        polylines = []; // Reset polyline array
+        // Remove existing clusterer if any
+        if (window.clusterer) {
+            window.clusterer.clearMarkers();
+        }
+
+        users.forEach(user => {
+            if (user.locationHistory && user.locationHistory.length > 0) {
+                // Start and end locations
+                const startLocation = user.locationHistory[0];
+                const endLocation = user.locationHistory[user.locationHistory.length - 1];
+
+
+                // Marker for end (this is what you want to cluster)
+                const activeIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="green" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">A</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+                const inactiveIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="red" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">I</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+
+                const startIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="blue" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">S</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+
+                const startMarker = new google.maps.Marker({
+                    position: { lat: startLocation.latitude, lng: startLocation.longitude },
+                    map: map,
+                    title: `${user.name} - Start`,
+                    label: 'S',
+                    icon: startIcon
+                });
+                startMarkers.push(startMarker);
+                const endMarker = new google.maps.Marker({
+                    position: { lat: endLocation.latitude, lng: endLocation.longitude },
+                    title: `${user.name} - End`,
+                    label: `${user.name}`,
+                    icon: user.tracking ? activeIcon : inactiveIcon,
+                });
+                markers.push(endMarker);
+
+                // Draw polyline (optional, not clustered)
+                const pathCoordinates = user.locationHistory.map(loc => ({
+                    lat: loc.latitude,
+                    lng: loc.longitude
+                }));
+                const polyline = new google.maps.Polyline({
+                    path: pathCoordinates,
+                    geodesic: true,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2,
+                });
+                polyline.setMap(map);
+                polylines.push(polyline); // Store the polyline reference for later removal
+
+            }
+        });
+
+        // Add clustering
+        window.clusterer = new MarkerClusterer(map, markers, {
+            imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
+            gridSize: 60, // Adjust for clustering sensitivity
+            maxZoom: 15   // Adjust as needed
+        });
+    }
+
+
+    // Function to create buttons for each hour
+    function createHourButtons() {
+        const container = document.getElementById("hourFilters");
+
+        for (let i = 1; i <= 24; i++) {
+            const button = document.createElement("button");
+            button.textContent = `${i} Hour${i > 1 ? "s" : ""}`;
+            button.classList.add("hour-button");
+            button.onclick = function() {
+                fetchUsers(i);
+            };
+            container.appendChild(button);
+        }
+    }
+
+    // Toggle hour filter visibility
+    function toggleFilters() {
+        const filters = document.getElementById("hourFilters");
+        filters.style.display = filters.style.display === "block" ? "none" : "block";
+    }
+    initMap();
+
+</script>
+</body>
+</html>
+
+
+

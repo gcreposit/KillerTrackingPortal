@@ -2,9 +2,445 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Location Tracking</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkyZ_KEJyO9abb8-TW96HaE-Uu_3q4IQw&callback=initMap"
+            async defer></script>
+    <script src="https://cdn.jsdelivr.net/gh/googlemaps/v3-utility-library/markerclusterer/src/markerclusterer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        /* General styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Container for map and table */
+        #map {
+            height: 60vh;
+            width: 100%;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+            text-align: left;
+            padding: 12px 15px;
+        }
+
+        th {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Buttons and Filters */
+        #hourFilters {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hour-button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .hour-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            font-size: 24px;
+            transition: background-color 0.3s ease;
+        }
+
+        .fab:hover {
+            background-color: #0056b3;
+        }
+
+        /* Card for displaying user data on the map */
+        .user-info-card {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+        }
+
+        .user-info-card h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .user-info-card p {
+            color: #777;
+        }
+        .centered-cell {
+            text-align: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #map {
+                height: 50vh;
+            }
+
+            .hour-button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            .user-info-card {
+                width: 250px;
+            }
+        }
+    </style>
 </head>
 <body>
 
+<div id="map"></div>
+<table id="userTable">
+    <thead>
+    <tr>
+        <th>S.No</th>
+        <th>UserName</th>
+        <th>Email</th>
+        <th>Bus No</th>
+        <th>Tracking</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody id="userTableBody">
+    <!-- Table data will be inserted here -->
+    </tbody>
+</table>
+
+<div id="hourFilters"></div>
+
+<!-- Floating Button -->
+<button class="fab" onclick="toggleFilters()">+</button>
+<!-- Bell Icon Button -->
+<button id="notificationBell" class="fab" style="right: 90px; background: #ff9800;">
+    <span>&#128276;</span>
+</button>
+
+
+<!-- Modal for Notifications -->
+<div id="notificationModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; border-radius:12px; width:400px; max-width:90vw; padding:0; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="display:flex; border-bottom:1px solid #eee;">
+            <button id="tabIC" style="flex:1; padding:16px; background:#f5f5f5; border:none; border-radius:12px 0 0 0; font-weight:bold;">Information Centre</button>
+            <button id="tabCC" style="flex:1; padding:16px; background:#fff; border:none; border-radius:0 12px 0 0; font-weight:bold;">Command Centre</button>
+        </div>
+        <div id="formIC" style="padding:24px;">
+            <label style="font-weight:bold;">Enter message:</label>
+            <textarea id="icMessage" style="width:100%; margin-top:8px; border-radius:6px; border:1px solid #ccc; padding:8px;" rows="3"></textarea>
+            <button onclick="submitIC()" style="margin-top:16px; background:#007BFF; color:#fff; border:none; border-radius:6px; padding:10px 20px; width:100%; font-weight:bold;">Send Notification</button>
+        </div>
+        <div id="formCC" style="display:none; padding:24px;">
+            <label style="font-weight:bold;">Enter message:</label>
+            <textarea id="ccMessage" style="width:100%; margin-top:8px; border-radius:6px; border:1px solid #ccc; padding:8px;" rows="2"></textarea>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <input id="latitude" type="number" step="any" placeholder="Latitude" style="flex:1; border-radius:6px; border:1px solid #ccc; padding:8px;">
+                <input id="longitude" type="number" step="any" placeholder="Longitude" style="flex:1; border-radius:6px; border:1px solid #ccc; padding:8px;">
+            </div>
+            <button onclick="submitCC()" style="margin-top:16px; background:#28a745; color:#fff; border:none; border-radius:6px; padding:10px 20px; width:100%; font-weight:bold;">Send Command</button>
+        </div>
+        <button onclick="closeModal()" style="background:none; border:none; color:#888; font-size:20px; position:absolute; top:10px; right:20px; cursor:pointer;">&times;</button>
+    </div>
+</div>
+
+<script>
+
+    window.onload = function () {
+        createHourButtons();  // Create hour buttons when the page loads
+        initMap();  // Initialize the map
+        connectWebSocket();  // Connect to WebSocket for real-time updates
+    };
+
+    let map;
+    let users = [];
+    let markers = [];
+    let polylines = [];
+    let startMarkers = [];
+    let stompClient = null;
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 10,
+            center: {lat: 26.8467, lng: 80.9462},
+        });
+        fetchUsers(2);  // Fetch users when the page loads
+    }
+
+    function fetchUsers(hours) {
+        fetch(`/data/get-users?hours=${hours}`)
+            .then(response => response.json())
+            .then(data => {
+                users = data;
+                displayUsersOnTable();
+                plotUsersOnMap();
+            })
+            .catch(error => console.error('Error fetching user data:', error));
+    }
+
+    function displayUsersOnTable() {
+        const tableBody = document.getElementById('userTableBody');
+
+        // Clear the existing table data
+        tableBody.innerHTML = '';
+
+        // Ensure we are properly checking for the user data before inserting
+        if (users.length > 0) {
+            // Loop through the users and add rows
+            users.forEach((user, index) => {
+                const tr = document.createElement('tr');
+
+                // Set background color based on user tracking status
+                const statusColor = user.tracking ? 'lightgreen' : 'lightcoral'; // lightgreen for active, lightcoral for inactive
+                const statusText = user.tracking ? 'ACTIVE' : 'INACTIVE'; // Status text
+
+                tr.innerHTML = `
+            <td class="centered-cell">${index + 1}</td>
+            <td class="centered-cell" >${user.name}</td>
+            <td class="centered-cell">${user.email}</td>
+            <td class="centered-cell">${user.busNo}</td>
+            <td class="centered-cell">${user.tracking ? 'Yes' : 'No'}</td>
+            <td class="centered-cell" style="background-color: ${statusColor};">${statusText}</td>
+        `;
+                tableBody.appendChild(tr);
+            });
+        } else {
+            // If no users found, add a message to the table
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="5" style="text-align: center;">No users found</td>`;
+            tableBody.appendChild(tr);
+        }
+    }
+
+
+    function plotUsersOnMap() {
+        markers.forEach(marker => marker.setMap(null));
+        markers = [];
+        startMarkers.forEach(marker => marker.setMap(null));
+        startMarkers = [];
+        polylines.forEach(polyline => polyline.setMap(null));
+        polylines = [];
+
+        if (window.clusterer) {
+            window.clusterer.clearMarkers();
+        }
+
+        users.forEach(user => {
+            if (user.locationHistory && user.locationHistory.length > 0) {
+                const startLocation = user.locationHistory[0];
+                const endLocation = user.locationHistory[user.locationHistory.length - 1];
+
+                const activeIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="green" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">A</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+                const inactiveIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="red" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">I</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+                const startIcon = {
+                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="blue" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">S</text></svg>',
+                    scaledSize: new google.maps.Size(24, 24),
+                };
+
+                const startMarker = new google.maps.Marker({
+                    position: {lat: startLocation.latitude, lng: startLocation.longitude},
+                    map: map,
+                    title: `${user.name} - Start`,
+                    label: 'S',
+                    icon: startIcon
+                });
+                startMarkers.push(startMarker);
+
+                const endMarker = new google.maps.Marker({
+                    position: {lat: endLocation.latitude, lng: endLocation.longitude},
+                    title: `${user.name} - End`,
+                    label: `${user.name}`,
+                    icon: user.tracking ? activeIcon : inactiveIcon,
+                    map: map
+                });
+                markers.push(endMarker);
+
+                const pathCoordinates = user.locationHistory.map(loc => ({
+                    lat: loc.latitude,
+                    lng: loc.longitude
+                }));
+                const polyline = new google.maps.Polyline({
+                    path: pathCoordinates,
+                    geodesic: true,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 2,
+                });
+                polyline.setMap(map);
+                polylines.push(polyline);
+            }
+        });
+
+        window.clusterer = new MarkerClusterer(map, markers, {
+            imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
+            gridSize: 60,
+            maxZoom: 15
+        });
+    }
+
+    function createHourButtons() {
+        const container = document.getElementById("hourFilters");
+        container.innerHTML = "";  // Clear previous buttons if any
+
+        for (let i = 1; i <= 24; i++) {
+            const button = document.createElement("button");
+            button.textContent = `${i} Hour${i > 1 ? "s" : ""}`;
+            button.classList.add("hour-button");
+            button.onclick = function () {
+                fetchUsers(i);
+            };
+            container.appendChild(button);
+        }
+    }
+
+    function toggleFilters() {
+        const filters = document.getElementById("hourFilters");
+        filters.style.display = filters.style.display === "block" ? "none" : "block";
+    }
+
+    // WebSocket Real-Time Update Section
+    function connectWebSocket() {
+        // Determine the WebSocket URL based on the environment (localhost vs production)
+        const wsUrl = window.location.hostname === 'localhost'
+            ? 'http://localhost:9090/ws-location' // For local development
+            : 'https://uppolice.gccloud.in/ws-location'; // For production
+        const socket = new SockJS(wsUrl);
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/location', function (message) {
+                const updatedUser = JSON.parse(message.body);
+                updateUserInList(updatedUser);
+                displayUsersOnTable();
+                plotUsersOnMap();
+            });
+        });
+    }
+
+    // Helper to update or add the user in your users array
+    function updateUserInList(updatedUser) {
+        const idx = users.findIndex(u => u.docId === updatedUser.docId);
+        if (idx !== -1) {
+            console.log("ye mila hai naya user ");
+            console.log("all users: ", users);
+            users[idx] = updatedUser;
+        } else {
+            users.push(updatedUser);
+        }
+    }
+</script>
+
+
+<script>
+    // Modal logic
+    document.getElementById('notificationBell').onclick = function() {
+        document.getElementById('notificationModal').style.display = 'flex';
+        showTab('IC');
+    };
+    function closeModal() {
+        document.getElementById('notificationModal').style.display = 'none';
+    }
+    document.getElementById('tabIC').onclick = function() { showTab('IC'); };
+    document.getElementById('tabCC').onclick = function() { showTab('CC'); };
+    function showTab(tab) {
+        document.getElementById('formIC').style.display = tab === 'IC' ? 'block' : 'none';
+        document.getElementById('formCC').style.display = tab === 'CC' ? 'block' : 'none';
+        document.getElementById('tabIC').style.background = tab === 'IC' ? '#f5f5f5' : '#fff';
+        document.getElementById('tabCC').style.background = tab === 'CC' ? '#f5f5f5' : '#fff';
+    }
+
+    // Submit Information Centre
+    function submitIC() {
+        const message = document.getElementById('icMessage').value.trim();
+        if (!message) return alert('Please enter a message.');
+        fetch('/data/sendNotification', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                type: 'IC',
+                message: message
+            })
+        }).then(res => res.text()).then(msg => {
+            alert(msg);
+            closeModal();
+        });
+    }
+
+    // Submit Command Centre
+    function submitCC() {
+        const message = document.getElementById('ccMessage').value.trim();
+        const latitude = document.getElementById('latitude').value.trim();
+        const longitude = document.getElementById('longitude').value.trim();
+        if (!message || !latitude || !longitude) return alert('Please fill all fields.');
+        fetch('/data/sendNotification', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                type: 'CC',
+                message: message,
+                latitude: latitude,
+                longitude: longitude
+            })
+        }).then(res => res.text()).then(msg => {
+            alert(msg);
+            closeModal();
+        });
+    }
+</script>
 </body>
 </html>

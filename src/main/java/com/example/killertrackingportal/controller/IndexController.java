@@ -15,7 +15,7 @@ public class IndexController {
     @GetMapping(path="/")
     public String goToHomePage(){
 
-        return "redirect:/nhp/dashboard";
+        return "redirect:/killerPortal/adminPanel";
     }
 
 
