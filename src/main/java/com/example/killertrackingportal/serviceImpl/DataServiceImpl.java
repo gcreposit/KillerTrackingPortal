@@ -11,7 +11,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +23,6 @@ import java.io.Reader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,19 +36,10 @@ public class DataServiceImpl implements DataService {
 
     private final FirebaseAccessTokenService firebaseAccessTokenService;
     private final UppnedaRepo uppnedaRepo;
-
-    private HttpClient httpClient;
-
     private final Firestore firestore;
     private HttpClient httpClient;
-
     @Value("${img.directory}")
     private String imgPath;
-
-    @PostConstruct
-    public void init() {
-        this.httpClient = HttpClient.newHttpClient();
-    }
 
     public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService, Firestore firestore, UppnedaRepo uppnedaRepo) {
         this.firebaseAccessTokenService = firebaseAccessTokenService;
@@ -80,9 +69,7 @@ public class DataServiceImpl implements DataService {
         if ("IC".equals(type)) {
             title = "Notification from Information Centre";
             doc.put("title", title);
-        }
-
-        else if ("CC".equals(type)) {
+        } else if ("CC".equals(type)) {
             title = "Notification from Command Centre";
             doc.put("title", title);
             doc.put("latitude", payload.get("latitude"));
@@ -158,7 +145,7 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public  List<Uppneda> fetchAllFormData() {
+    public List<Uppneda> fetchAllFormData() {
         List<Uppneda> uppnedaList = uppnedaRepo.findAll();
         return uppnedaList;
     }
