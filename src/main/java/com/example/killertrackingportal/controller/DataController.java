@@ -7,8 +7,8 @@ import com.example.killertrackingportal.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,4 +51,11 @@ public class DataController {
         List<Map<String, Object>> notifications = dataService.getAllNotifications();
         return ResponseEntity.ok(notifications);
     }
+
+    @PostMapping("/addMasterData")
+    public ResponseEntity<Map<String, Object>> addMasterDataByCsv(@RequestParam MultipartFile file) {
+        Map<String, Object> response = dataService.importMasterDataFromCsv(file);
+        return ResponseEntity.ok(response);
+    }
+
 }

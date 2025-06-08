@@ -7,15 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class IndexController {
 
 
+    @GetMapping(path = "/")
+    public String goToHomePage() {
 
-
-    public IndexController() {
-    }
-
-    @GetMapping(path="/")
-    public String goToHomePage(){
-
-        return "redirect:/killerPortal/adminPanel";
+        return "redirect:/trackUser/adminPanel";
     }
 
 

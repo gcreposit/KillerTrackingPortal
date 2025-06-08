@@ -8,14 +8,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 
 @Controller
-@RequestMapping(path = "/killerPortal")
+@RequestMapping(path = "/trackUser")
 public class PageController {
 
 
     @GetMapping("/adminPanel")
     public String goToPanel(Model theModel) {
 
-        return "killerDashboard/killerDashboard";
+        return "tracker/track_dashboard";
     }
 }
 

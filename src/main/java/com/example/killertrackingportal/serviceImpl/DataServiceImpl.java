@@ -2,20 +2,20 @@ package com.example.killertrackingportal.serviceImpl;
 
 import com.example.killertrackingportal.service.DataService;
 import com.example.killertrackingportal.service.FirebaseAccessTokenService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.FieldValue;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -32,20 +32,18 @@ public class DataServiceImpl implements DataService {
 
 
     private final FirebaseAccessTokenService firebaseAccessTokenService;
-
-    private HttpClient httpClient;
-
     private final Firestore firestore;
-
-    @PostConstruct
-    public void init() {
-        this.httpClient = HttpClient.newHttpClient();
-    }
+    private HttpClient httpClient;
 
     public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService, Firestore firestore) {
         this.firebaseAccessTokenService = firebaseAccessTokenService;
         this.firestore = firestore;
 
+    }
+
+    @PostConstruct
+    public void init() {
+        this.httpClient = HttpClient.newHttpClient();
     }
 
 
@@ -206,6 +204,56 @@ public class DataServiceImpl implements DataService {
 
         HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
     }
+
+
+    //---------------------------ENDED This Method is to sendNotification To all the Subscribers---------------------
+
+
+    //---------------------------START OF MASTER DATA IMPORT SERVICE---------------------
+
+    @Override
+    public Map<String, Object> importMasterDataFromCsv(MultipartFile file) {
+        List<Map<String, Object>> importedData = new ArrayList<>();
+        List<String> failedRecords = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+
+        try (Reader reader = new InputStreamReader(file.getInputStream())) {
+            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
+            CollectionReference collection = firestore.collection("masterData");
+
+            for (CSVRecord record : records) {
+                Map<String, Object> data = new HashMap<>();
+                for (String header : record.toMap().keySet()) {
+                    data.put(header, record.get(header));
+                }
+
+                try {
+                    DocumentReference docRef = collection.document();
+                    ApiFuture<WriteResult> future = docRef.set(data);
+                    future.get();
+                    importedData.add(data);
+                    successCount++;
+                } catch (Exception ex) {
+                    failureCount++;
+                    failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("successCount", successCount);
+        response.put("failureCount", failureCount);
+        response.put("failedRecords", failedRecords);
+        response.put("importedData", importedData);
+
+        return response;
+    }
+
+
 }
-//---------------------------ENDED This Method is to sendNotification To all the Subscribers---------------------
 
