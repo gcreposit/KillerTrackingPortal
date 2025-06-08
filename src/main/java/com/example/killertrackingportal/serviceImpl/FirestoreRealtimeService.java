@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @Service
@@ -24,28 +25,26 @@ public class FirestoreRealtimeService {
         this.messagingTemplate = messagingTemplate;
     }
 
+    String collectionName = "users";  // ✅ Valid field name
+
 
     // This method will be called after the bean is created
     @PostConstruct
     public void listenToUserLocations() {
-        CollectionReference usersCollection = firestore.collection("users");
+        CollectionReference usersCollection = firestore.collection(collectionName);
 
         usersCollection.addSnapshotListener((snapshots, e) -> {
             if (e != null) {
-                System.err.println("Listen failed: " + e);
+                log.error("Firestore collection error", e);
                 return;
             }
             for (DocumentChange dc : snapshots.getDocumentChanges()) {
                 String userId = dc.getDocument().getId();
                 switch (dc.getType()) {
-                    case ADDED:
-                    case MODIFIED:
-                        // Listen to the user's locationData subcollection
-                        listenToLocationData(userId);
-                        break;
-                    case REMOVED:
-                        // Handle user removal if needed
-                        break;
+                    case ADDED, MODIFIED -> listenToLocationData(userId);
+                    case REMOVED -> {
+
+                    }
                 }
             }
         });
@@ -85,7 +84,7 @@ public class FirestoreRealtimeService {
 
     // Modify this part to filter data based on the last 2 hours
     private void listenToLocationData(String userId) {
-        CollectionReference locationData = firestore.collection("users").document(userId).collection("locationData");
+        CollectionReference locationData = firestore.collection(collectionName).document(userId).collection("locationData");
         locationData.addSnapshotListener((locSnapshots, locE) -> {
             if (locE != null) {
                 log.error("Location listen failed: {}", locE.getMessage());
@@ -130,7 +129,7 @@ public class FirestoreRealtimeService {
     }
     private User getUserById(String userId) {
         try {
-            DocumentReference userDocRef = firestore.collection("users").document(userId);
+            DocumentReference userDocRef = firestore.collection(collectionName).document(userId);
             DocumentSnapshot userSnapshot = userDocRef.get().get();
             if (userSnapshot.exists()) {
                 User user = userSnapshot.toObject(User.class);
@@ -147,8 +146,14 @@ public class FirestoreRealtimeService {
                 }
                 return user;
             }
+        } catch (InterruptedException ie) {
+            // Re-interrupt the thread to preserve the interrupt status
+            Thread.currentThread().interrupt();
+            log.warn("Thread interrupted while fetching user by id {}", userId, ie);
+        } catch (ExecutionException e) {
+            log.error("Execution error fetching user by id {}: {}", userId, e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Error fetching user by id {}: {}", userId, e.getMessage());
+            log.error("Unexpected error fetching user by id {}: {}", userId, e.getMessage(), e);
         }
         return null;
     }
