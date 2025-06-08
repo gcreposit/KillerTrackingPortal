@@ -1,10 +1,12 @@
 package com.example.killertrackingportal.controller;
 
 
+import com.example.killertrackingportal.entity.Uppneda;
 import com.example.killertrackingportal.entity.User;
 import com.example.killertrackingportal.service.DataService;
 import com.example.killertrackingportal.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,5 +59,20 @@ public class DataController {
         Map<String, Object> response = dataService.importMasterDataFromCsv(file);
         return ResponseEntity.ok(response);
     }
+
+
+    @PostMapping(path = "/saveFormData",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> saveFormData(@ModelAttribute Uppneda uppneda) {
+        String message=dataService.saveFormData(uppneda);
+        return ResponseEntity.ok(message);
+    }
+
+
+    @GetMapping("/fetchAllFormData")
+    public  List<Uppneda> fetchAllFormData() {
+        List<Uppneda> allData  = dataService.fetchAllFormData();
+        return allData;
+    }
+
 
 }

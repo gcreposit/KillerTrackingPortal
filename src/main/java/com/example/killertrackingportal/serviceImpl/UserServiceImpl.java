@@ -32,9 +32,13 @@ public class UserServiceImpl implements UserService {
         try {
             usersSnapshot = usersCollection.get().get();
             log.info("Successfully fetched {} users.", usersSnapshot.size());
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();  // Restore the interrupted status
+            log.warn("Thread was interrupted while fetching users", ie);
+            return Collections.emptyList();      // Return empty list gracefully
         } catch (Exception e) {
-            log.error("Error fetching users: {}", e.getMessage());
-            return Collections.emptyList();  // Return an empty list in case of an error
+            log.error("Error fetching users: {}", e.getMessage(), e);
+            return Collections.emptyList();      // Return empty list in case of an error
         }
         // Calculate cutoff time if hour is provided
         Long cutoffMillis;
@@ -113,9 +117,13 @@ public class UserServiceImpl implements UserService {
             }
 
             return locations; // Return the full list of locations
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();  // Preserve interrupt status
+            log.warn("Thread was interrupted while fetching location history for user {}", userId, ie);
         } catch (Exception e) {
-            log.error("Error fetching location history for user {}: {}", userId, e.getMessage());
+            log.error("Error fetching location history for user {}: {}", userId, e.getMessage(), e);
         }
+
 
         return Collections.emptyList(); // Return an empty list if no location data is found
     }

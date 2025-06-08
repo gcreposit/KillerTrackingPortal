@@ -1,5 +1,7 @@
 package com.example.killertrackingportal.service;
 
+import com.example.killertrackingportal.entity.Uppneda;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,11 +11,14 @@ import java.util.Map;
 
 @Service
 public interface DataService {
-    Map<String, Integer> sendNotificationToAll(String title, String body, String description, List<Map<String, String>> projectStatusList) throws IOException, InterruptedException;
 
     void saveAndSendNotification(Map<String, Object> payload) throws Exception;
 
     List<Map<String, Object>> getAllNotifications();
 
     Map<String, Object> importMasterDataFromCsv(MultipartFile file);
+
+    String saveFormData(Uppneda uppneda);
+
+    List<Uppneda> fetchAllFormData();
 }

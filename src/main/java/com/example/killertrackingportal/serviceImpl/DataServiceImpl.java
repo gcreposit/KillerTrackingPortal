@@ -1,5 +1,7 @@
 package com.example.killertrackingportal.serviceImpl;
 
+import com.example.killertrackingportal.entity.Uppneda;
+import com.example.killertrackingportal.repository.UppnedaRepo;
 import com.example.killertrackingportal.service.DataService;
 import com.example.killertrackingportal.service.FirebaseAccessTokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,10 +11,13 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -32,13 +37,25 @@ public class DataServiceImpl implements DataService {
 
 
     private final FirebaseAccessTokenService firebaseAccessTokenService;
+    private final UppnedaRepo uppnedaRepo;
+
+    private HttpClient httpClient;
+
     private final Firestore firestore;
     private HttpClient httpClient;
 
-    public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService, Firestore firestore) {
+    @Value("${img.directory}")
+    private String imgPath;
+
+    @PostConstruct
+    public void init() {
+        this.httpClient = HttpClient.newHttpClient();
+    }
+
+    public DataServiceImpl(FirebaseAccessTokenService firebaseAccessTokenService, Firestore firestore, UppnedaRepo uppnedaRepo) {
         this.firebaseAccessTokenService = firebaseAccessTokenService;
         this.firestore = firestore;
-
+        this.uppnedaRepo = uppnedaRepo;
     }
 
     @PostConstruct
@@ -48,71 +65,6 @@ public class DataServiceImpl implements DataService {
 
 
     //---------------------------STARTED This Method is to sendNotification To all the Subscribers---------------------
-
-    public Map<String, Integer> sendNotificationToAll(String title, String body, String description, List<Map<String, String>> projectStatusList) throws IOException, InterruptedException {
-
-        String topic = "all";  // Your chosen topic
-
-        int successCount = 0;
-        int failureCount = 0;
-
-        String accessToken = firebaseAccessTokenService.getAccessToken();
-
-        String statusDetailsJson = new ObjectMapper().writeValueAsString(projectStatusList);
-
-        String escapedStatusDetailsJson = statusDetailsJson.replace("\"", "\\\"");
-
-
-// Payload for sending to topic instead of token
-        String payload = """
-                {
-                  "message": {
-                    "topic": "%s",
-                    "notification": {
-                      "title": "%s",
-                      "body": "%s"
-                    },
-                    "data": {
-                      "description": "%s",
-                      "projectStatusList": "%s"
-                    },
-                    "android": {
-                      "priority": "high",
-                      "notification": {
-                        "channel_id": "high_importance_channel",
-                        "sound": "default"
-                      }
-                    }
-                  }
-                }
-                """.formatted(topic, title, body + " [" + LocalDateTime.now() + "]", description, escapedStatusDetailsJson);
-
-
-        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                .uri(URI.create("https://fcm.googleapis.com/v1/projects/track-user-a77c7/messages:send"))
-                .header("Authorization", "Bearer " + accessToken)
-                .header("Content-Type", "application/json")
-                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            log.error("Failed to send notification to topic: {}", topic);
-            log.error("Response: {}", response.body());
-            failureCount++;
-            successCount = 0;
-        } else {
-            log.info("Notification sent successfully to topic: {}", topic);
-            log.error("Response: {}", response.body());
-        }
-
-
-        Map<String, Integer> result = new HashMap<>();
-        result.put("success", successCount);
-        result.put("failure", failureCount);
-        return result;
-    }
 
 
     //------------PART - 1 This method saves the notification to Firestore and sends a push notification to all subscribers--------------------------
@@ -128,7 +80,9 @@ public class DataServiceImpl implements DataService {
         if ("IC".equals(type)) {
             title = "Notification from Information Centre";
             doc.put("title", title);
-        } else if ("CC".equals(type)) {
+        }
+
+        else if ("CC".equals(type)) {
             title = "Notification from Command Centre";
             doc.put("title", title);
             doc.put("latitude", payload.get("latitude"));
@@ -159,6 +113,54 @@ public class DataServiceImpl implements DataService {
             e.printStackTrace();
         }
         return notificationList;
+    }
+
+    @Override
+    public String saveFormData(Uppneda uppneda) {
+
+        List<MultipartFile> files = uppneda.getImageFile();
+        StringBuilder relativePaths = new StringBuilder();
+
+        for (MultipartFile file : files) {
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename != null && !originalFilename.isEmpty()) {
+                try {
+                    // Generate unique file name (optional: use UUID)
+                    String fileName = System.currentTimeMillis() + "_" + originalFilename;
+                    String absolutePath = imgPath + File.separator + fileName;
+                    File destinationFile = new File(absolutePath);
+
+                    // Create directories if they do not exist
+                    if (!destinationFile.getParentFile().exists()) {
+                        destinationFile.getParentFile().mkdirs();
+                    }
+
+                    // Save the file to the server
+                    file.transferTo(destinationFile);
+
+                    // Save relative path in the database (relative to the images folder)
+                    relativePaths.append("/images/").append(fileName).append("; ");
+                } catch (IOException e) {
+                    return "Error while saving image: " + e.getMessage();
+                }
+            }
+        }
+
+        // Store relative image paths in the Uppneda entity and save in DB
+        uppneda.setImgPath(relativePaths.toString());
+
+        uppnedaRepo.save(uppneda);
+
+        // Here you can save 'uppneda' object to your database, assuming you have a repository for it.
+        // For example: uppnedaRepository.save(uppneda);
+
+        return "Form data and images saved successfully!";
+    }
+
+    @Override
+    public  List<Uppneda> fetchAllFormData() {
+        List<Uppneda> uppnedaList = uppnedaRepo.findAll();
+        return uppnedaList;
     }
 
     //------------PART - 2 This method saves the notification to Firestore and sends a push notification to all subscribers----------------------------------------
