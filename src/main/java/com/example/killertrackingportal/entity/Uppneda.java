@@ -29,6 +29,7 @@ public class Uppneda {
     private String landSize;
     private String ownerShipStatus;
     private String landOwnerName;
+    private String accessibility;
 
     @Transient
     private List<MultipartFile> imageFile;
