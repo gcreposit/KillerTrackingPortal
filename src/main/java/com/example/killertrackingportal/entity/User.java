@@ -28,6 +28,25 @@ public class User {
     private boolean tracking;
     private String docId;
     private String latestLocation;
+    private boolean showLastKnownLocation = false;
+
+    public boolean isShowLastKnownLocation() {
+        return showLastKnownLocation;
+    }
+
+    public void setShowLastKnownLocation(boolean showLastKnownLocation) {
+        this.showLastKnownLocation = showLastKnownLocation;
+    }
+
+    public String getLastActiveAt() {
+        return lastActiveAt;
+    }
+
+    public void setLastActiveAt(String lastActiveAt) {
+        this.lastActiveAt = lastActiveAt;
+    }
+
+    private String lastActiveAt;
 
     private String oldestLocation; // Assuming this is a field of type Location, adjust as necessary
 

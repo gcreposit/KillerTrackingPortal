@@ -61,9 +61,11 @@ public class UserServiceImpl implements UserService {
 
                     // Fetch the user's location history (all locations)
                     List<Location> locationHistory = getLocationHistory(doc.getId());
+                    List<Location> recentLocations = locationHistory;
+
                     // If hour filter is set, filter the location history
                     if (cutoffMillis != null) {
-                        locationHistory = locationHistory.stream()
+                        recentLocations = locationHistory.stream()
                                 .filter(loc -> {
                                     Date locDate = parseDate(loc.getTimestamp());
                                     return locDate != null && locDate.getTime() >= cutoffMillis;
@@ -72,8 +74,19 @@ public class UserServiceImpl implements UserService {
                     }
 
                     // Set the location history in the user object
-                    user.setLocationHistory(locationHistory);
+                    user.setLocationHistory(recentLocations);
 
+                    // If user is INACTIVE and recentLocations is empty, set last known location
+                    if (!user.isTracking() && recentLocations.isEmpty() && !locationHistory.isEmpty()) {
+                        List<Location> lastLocList = new ArrayList<>();
+                        lastLocList.add(locationHistory.get(locationHistory.size() - 1));
+                        user.setLocationHistory(lastLocList);
+                        user.setShowLastKnownLocation(true); // Add this flag in User entity
+                    }
+                    // Set last active at (optional, for your table)
+                    if (!locationHistory.isEmpty()) {
+                        user.setLastActiveAt(locationHistory.get(locationHistory.size() - 1).getTimestamp());
+                    }
                     return user;
                 })
                 .collect(Collectors.toList());

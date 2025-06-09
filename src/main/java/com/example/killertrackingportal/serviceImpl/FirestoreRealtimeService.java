@@ -94,6 +94,9 @@ public class FirestoreRealtimeService {
             List<Location> locations = new ArrayList<>();
             Instant twoHoursAgo = Instant.now().minus(2, ChronoUnit.HOURS); // Get the timestamp for 2 hours ago
 
+            Location lastLocation = null;
+            Instant lastLocationInstant = null;
+
             // Fetch the user's tracking status
 
             for (DocumentSnapshot locDoc : locSnapshots.getDocuments()) {
@@ -104,6 +107,10 @@ public class FirestoreRealtimeService {
                 // Check if timestamp is available
                 if (firestoreTimestamp != null) {
                     Instant timestamp = firestoreTimestamp.toDate().toInstant();
+                    if (lastLocationInstant == null || timestamp.isAfter(lastLocationInstant)) {
+                        lastLocationInstant = timestamp;
+                        lastLocation = new Location(latitude, longitude, timestamp.toString());
+                    }
                     if (timestamp.isAfter(twoHoursAgo)) { // Only add locations within the last 2 hours
                         locations.add(new Location(latitude, longitude, timestamp.toString()));
                     }
@@ -118,6 +125,12 @@ public class FirestoreRealtimeService {
                 String busNo = user.getBusNo();
 
                 user.setBusNo(busNo);
+                // --- Set lastActiveAt to the latest location timestamp, even if inactive ---
+                if (lastLocation != null) {
+                    user.setLastActiveAt(lastLocation.getTimestamp());
+                } else {
+                    user.setLastActiveAt(null);
+                }
                 log.info("User {} is on bus {}", userId, busNo);
 
                 // Send update to all subscribers

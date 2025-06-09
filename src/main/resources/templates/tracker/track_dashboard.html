@@ -192,17 +192,23 @@
 <body>
 
 <div id="map"></div>
+
+<div id="summaryCard" style="width:100%;margin:24px 0 0 0;display:flex;justify-content:center;">
+    <!-- Card content will be injected by JS -->
+</div>
+
 <table id="userTable">
     <thead>
     <tr>
-        <th>S.No</th>
-        <th>Officer Name</th>
-        <th>Email</th>
-        <th>Bus No</th>
-        <th>Distance From Destination</th>
-        <th>ETA</th>
-        <th>Tracking</th>
-        <th>Status</th>
+        <th class="centered-cell">S.No</th>
+        <th class="centered-cell">Officer Name</th>
+        <th class="centered-cell">Email</th>
+        <th class="centered-cell">Bus No</th>
+        <th class="centered-cell">Distance From Destination</th>
+        <th class="centered-cell">ETA</th>
+        <th class="centered-cell">Tracking</th>
+        <th class="centered-cell">Last Active At</th>
+        <th class="centered-cell">Status</th>
     </tr>
     </thead>
     <tbody id="userTableBody">
@@ -223,7 +229,7 @@
     <span class="material-icons-outlined">campaign</span>
 </button>
 
-<!-- Upload Button (Upload Icon) -->
+<!---------------------MODAL OF EXCEL Upload Button (Upload Icon) ---------------->
 <button class="fab" id="masterDataUpload" onclick="openMasterDataModal()" style="right: 160px; background: #2196F3;"
         title="Upload CSV or Data">
     <span class="material-icons-outlined">upload</span>
@@ -389,9 +395,13 @@
                 users = data;
                 displayUsersOnTable();
                 plotUsersOnMap();
+                renderSummaryCard();
+
             })
             .catch(error => console.error('Error fetching user data:', error));
     }
+
+    //------------------START This function fetches the latest "CC" notification and plots the destination and routes------------------
 
     function fetchMcNotifications() {
         // Fetch all notifications from your backend API
@@ -429,12 +439,15 @@
 
     }
 
+    //------------------END This function fetches the latest "CC" notification and plots the destination and routes------------------
+
+    //------------------START This function plots the destination and routes for all users------------------
 
     function plotDestinationAndRoutes(destLat, destLng) {
         // 2. Plot destination marker with "D" icon
         if (destinationMarker) destinationMarker.setMap(null);
         const dIcon = {
-            url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="orange"/><text x="16" y="22" font-size="18" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold">D</text></svg>',
+            url: '/images/location_10813380.png', // Path relative to the static folder
             scaledSize: new google.maps.Size(32, 32)
         };
         destinationMarker = new google.maps.Marker({
@@ -443,8 +456,9 @@
             icon: dIcon,
             title: "Destination"
         });
-        map.setCenter({lat: destLat, lng: destLng});
-        map.setZoom(13);
+        // Just Commented this line to not center the map on destination and Automatically zoom to the DESTINATION
+        // map.setCenter({lat: destLat, lng: destLng});
+        // map.setZoom(13);
 
         // 3. Remove old polylines
         routePolylines.forEach(poly => poly.setMap(null));
@@ -473,7 +487,7 @@
                     const polyline = new google.maps.Polyline({
                         path: routePath,
                         geodesic: true,
-                        strokeColor: "#04400c", // light green
+                        strokeColor: "#0a87f5", // light green
                         strokeOpacity: 0.9,
                         strokeWeight: 5,
                         map: map
@@ -506,6 +520,39 @@
         });
     }
 
+    function formatDateTime(dateString) {
+        if (!dateString || dateString === '-') return '-';
+        // Handles both ISO and Date.toString() formats
+        let date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString; // fallback if parsing fails
+
+        // Format: DD-MM-YYYY HH:mm:ss (24-hour)
+        let day = String(date.getDate()).padStart(2, '0');
+        let month = String(date.getMonth() + 1).padStart(2, '0');
+        let year = date.getFullYear();
+        let hours = String(date.getHours()).padStart(2, '0');
+        let mins = String(date.getMinutes()).padStart(2, '0');
+        let secs = String(date.getSeconds()).padStart(2, '0');
+        return `${day}-${month}-${year} ${hours}:${mins}:${secs}`;
+    }
+
+
+    function focusUserOnMap(docId) {
+        // Close all open InfoWindows first
+        Object.values(infoWindowMap).forEach(iw => iw.close());
+
+        const marker = markerMap[docId];
+        const infoWindow = infoWindowMap[docId];
+        if (marker && infoWindow) {
+            map.setCenter(marker.getPosition());
+            map.setZoom(15); // Optional: zoom in
+            infoWindow.open(map, marker);
+        }
+    }
+
+
+    //------------------END This function plots the destination and routes for all users------------------
+
     function displayUsersOnTable() {
         const tableBody = document.getElementById('userTableBody');
 
@@ -514,6 +561,8 @@
 
         // Ensure we are properly checking for the user data before inserting
         if (users.length > 0) {
+            // showUserPopup(users[0]);
+
             // Loop through the users and add rows
             users.forEach((user, index) => {
                 const tr = document.createElement('tr');
@@ -521,16 +570,22 @@
                 // Set background color based on user tracking status
                 const statusColor = user.tracking ? 'lightgreen' : 'lightcoral'; // lightgreen for active, lightcoral for inactive
                 const statusText = user.tracking ? 'ACTIVE' : 'INACTIVE'; // Status text
+                const busNo = user.busNo ? user.busNo : 'NA';
 
                 tr.innerHTML = `
             <td class="centered-cell">${index + 1}</td>
-            <td class="centered-cell" >${user.name}</td>
-            <td class="centered-cell">${user.email}</td>
-            <td class="centered-cell">${user.busNo}</td>
+ <td class="centered-cell">
+        <a href="#" onclick="focusUserOnMap('${user.docId}'); return false;" style="color:#007bff;cursor:pointer;text-decoration:underline;">
+            ${user.name}
+        </a>
+    </td>            <td class="centered-cell">${user.email}</td>
+            <td class="centered-cell">${busNo}</td>
             <td class="centered-cell">${user.distance || 'Calculating...'}</td>
             <td class="centered-cell">${user.eta || 'Calculating...'}</td>
             <td class="centered-cell">${user.tracking ? 'Yes' : 'No'}</td>
-            <td class="centered-cell" style="background-color: ${statusColor};">${statusText}</td>
+<td class="centered-cell">${formatDateTime(user.lastActiveAt) || '-'}</td>
+  <td class="centered-cell" style="background-color: ${statusColor};">${statusText}</td>
+
         `;
                 tableBody.appendChild(tr);
             });
@@ -542,22 +597,24 @@
         }
     }
 
+    // ---------STARTS This function plots users on the map with their start and end locations, and draws polylines for their location history. It also uses MarkerClusterer to group markers.---------
+
+    let markerMap = {};      // user.docId -> marker
+    let infoWindowMap = {};  // user.docId -> infoWindow
 
     function plotUsersOnMap() {
         markers.forEach(marker => marker.setMap(null));
         markers = [];
-        startMarkers.forEach(marker => marker.setMap(null));
-        startMarkers = [];
         polylines.forEach(polyline => polyline.setMap(null));
         polylines = [];
-
         if (window.clusterer) {
             window.clusterer.clearMarkers();
         }
+        markerMap = {};
+        infoWindowMap = {};
 
         users.forEach(user => {
             if (user.locationHistory && user.locationHistory.length > 0) {
-                const startLocation = user.locationHistory[0];
                 const endLocation = user.locationHistory[user.locationHistory.length - 1];
 
                 const activeIcon = {
@@ -568,29 +625,62 @@
                     url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="red" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">I</text></svg>',
                     scaledSize: new google.maps.Size(24, 24),
                 };
-                const startIcon = {
-                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="blue" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">S</text></svg>',
-                    scaledSize: new google.maps.Size(24, 24),
-                };
 
-                // const startMarker = new google.maps.Marker({
-                //     position: {lat: startLocation.latitude, lng: startLocation.longitude},
-                //     map: map,
-                //     title: `${user.name} - Start`,
-                //     label: 'S',
-                //     icon: startIcon
-                // });
-                // startMarkers.push(startMarker);
-
-                const endMarker = new google.maps.Marker({
+                const marker = new google.maps.Marker({
                     position: {lat: endLocation.latitude, lng: endLocation.longitude},
                     title: `Officer - ${user.name}`,
-                    // label: `${user.name}`,
                     icon: user.tracking ? activeIcon : inactiveIcon,
                     map: map
                 });
-                markers.push(endMarker);
+                markers.push(marker);
 
+                const infoContent = `
+                <div style="min-width:220px; font-family: Arial, sans-serif;">
+    <table style="width:100%; border-collapse:collapse;">
+        <tr>
+            <td style="font-weight:bold; color:#333; padding:4px 8px;">User Name</td>
+            <td style="padding:4px 8px;">${user.name}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold; color:#333; padding:4px 8px;">Status</td>
+            <td style="padding:4px 8px;">
+                <span style="font-weight:bold; color:${user.tracking ? '#388e3c' : '#d32f2f'};">
+                    ${user.tracking ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold; color:#333; padding:4px 8px;">Last Active At</td>
+            <td style="padding:4px 8px;">${formatDateTime(user.lastActiveAt)}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold; color:#333; padding:4px 8px;">Email</td>
+            <td style="padding:4px 8px;">${user.email}</td>
+        </tr>
+       <tr>
+    <td style="font-weight:bold; color:#333; padding:4px 8px;">Bus No</td>
+    <td style="padding:4px 8px;">${user.busNo && user.busNo !== "undefined" && user.busNo !== "" ? user.busNo : 'NA'}</td>
+</tr>
+    </table>
+</div>
+            `;
+                const infoWindow = new google.maps.InfoWindow({
+                    content: infoContent
+                });
+
+                // Do NOT open by default!
+                // infoWindow.open(map, marker);
+
+                // Allow reopening on marker click
+                marker.addListener('click', function () {
+                    infoWindow.open(map, marker);
+                });
+
+                // Store marker and infoWindow for later access (use docId for uniqueness)
+                markerMap[user.docId] = marker;
+                infoWindowMap[user.docId] = infoWindow;
+
+                // Draw polyline for user's path
                 const pathCoordinates = user.locationHistory.map(loc => ({
                     lat: loc.latitude,
                     lng: loc.longitude
@@ -613,6 +703,8 @@
             maxZoom: 15
         });
     }
+
+    // ---------END This function plots users on the map with their start and end locations, and draws polylines for their location history. It also uses MarkerClusterer to group markers.---------
 
     function createHourButtons() {
         const container = document.getElementById("hourFilters");
@@ -659,6 +751,8 @@
                 displayUsersOnTable();
                 plotUsersOnMap();
                 fetchMcNotifications(); // <-- call here
+                renderSummaryCard();
+
             });
         });
     }
@@ -673,6 +767,40 @@
         } else {
             users.push(updatedUser);
         }
+    }
+    function renderSummaryCard() {
+        // Calculate stats
+        const totalUsers = users.length;
+        const allBuses = users
+            .map(u => u.busNo)
+            .filter(busNo => busNo && busNo !== "undefined");
+        const totalActive = users.filter(u => u.tracking).length;
+        const totalInactive = totalUsers - totalActive;
+        const uniqueBuses = [...new Set(allBuses)];
+        const totalBuses = allBuses.length;
+        const totalUniqueBuses = uniqueBuses.length;
+
+        // Card HTML
+        document.getElementById('summaryCard').innerHTML = `
+        <div style="
+            display:flex;
+            gap:32px;
+            background:#fff;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.08);
+            padding:18px 32px;
+            font-size:17px;
+            font-family:Arial,sans-serif;
+            margin-bottom:12px;
+            flex-wrap:wrap;
+        ">
+            <div><b>Total Officers Tracked:</b> ${totalUsers}</div>
+            <div><b>Current Active Officer:</b> <span style="color:#388e3c;font-weight:bold;">${totalActive}</span></div>
+            <div><b>Current Inactive Officer:</b> <span style="color:#d32f2f;font-weight:bold;">${totalInactive}</span></div>
+            <div><b>Total Unique Buses:</b> ${totalUniqueBuses}</div>
+            <div><b>Total Buses Monitored:</b> ${totalBuses}</div>
+        </div>
+    `;
     }
 
 
