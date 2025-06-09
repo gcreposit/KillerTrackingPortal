@@ -28,6 +28,7 @@ public class Uppneda {
     private String cityName;
     private String landSize;
     private String ownerShipStatus;
+    private String landOwnerName;
 
     @Transient
     private List<MultipartFile> imageFile;
