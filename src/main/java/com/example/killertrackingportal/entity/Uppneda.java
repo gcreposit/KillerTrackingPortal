@@ -36,4 +36,6 @@ public class Uppneda {
 
 
     private String imgPath;
+
+    private List<byte[]> imageData;
 }
