@@ -30,6 +30,18 @@ public class User {
     private String latestLocation;
     private boolean showLastKnownLocation = false;
 
+    public String getRegistration_no() {
+        return registration_no;
+    }
+
+    public void setRegistration_no(String registration_no) {
+        this.registration_no = registration_no;
+    }
+
+    private String registration_no;
+
+
+
     public boolean isShowLastKnownLocation() {
         return showLastKnownLocation;
     }

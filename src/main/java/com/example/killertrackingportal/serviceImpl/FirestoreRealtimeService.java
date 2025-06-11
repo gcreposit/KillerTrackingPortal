@@ -1,4 +1,5 @@
 package com.example.killertrackingportal.serviceImpl;
+
 import com.example.killertrackingportal.entity.Location;
 import com.example.killertrackingportal.entity.User;
 import com.google.cloud.firestore.*;
@@ -123,7 +124,10 @@ public class FirestoreRealtimeService {
                 user.setLocationHistory(locations);
 
                 String busNo = user.getBusNo();
+                String registrationNo = user.getRegistration_no();
 
+
+                user.setRegistration_no(registrationNo);
                 user.setBusNo(busNo);
                 // --- Set lastActiveAt to the latest location timestamp, even if inactive ---
                 if (lastLocation != null) {
@@ -140,6 +144,7 @@ public class FirestoreRealtimeService {
             }
         });
     }
+
     private User getUserById(String userId) {
         try {
             DocumentReference userDocRef = firestore.collection(collectionName).document(userId);
@@ -151,11 +156,14 @@ public class FirestoreRealtimeService {
                 if (user != null) {
                     user.setDocId(userId);
                     String busNo = userSnapshot.getString("bus_no");
+                    String registrationNo = userSnapshot.getString("registration_no");
                     log.info("User {} is on bus {}", userId, busNo);
                     if (busNo != null) {
                         user.setBusNo(busNo); // Set the busNo field
                     }
-
+                      if(registrationNo != null) {
+                          user.setRegistration_no(registrationNo); // Set the registration_no field
+                      }
                 }
                 return user;
             }

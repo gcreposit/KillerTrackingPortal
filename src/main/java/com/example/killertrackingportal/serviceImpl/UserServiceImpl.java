@@ -57,6 +57,9 @@ public class UserServiceImpl implements UserService {
                     String busNo = doc.getString("bus_no"); // Fetch the bus_no from Firestore
                     user.setBusNo(busNo); // Set bus_no in the user object
 
+                    String registrationNo = doc.getString("registration_no");
+                    user.setRegistration_no(registrationNo); // Set registration_no in the user object
+
 
 
                     // Fetch the user's location history (all locations)

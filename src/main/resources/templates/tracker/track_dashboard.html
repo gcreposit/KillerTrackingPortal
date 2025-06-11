@@ -409,7 +409,7 @@
         <th class="centered-cell">S.No</th>
         <th class="centered-cell">Bus No</th>
         <th class="centered-cell">Officer Name</th>
-        <th class="centered-cell">Email</th>
+<!--        <th class="centered-cell">Email</th>-->
         <th class="centered-cell">Distance From Destination</th>
         <th class="centered-cell">ETA</th>
         <th class="centered-cell">Tracking</th>
@@ -774,6 +774,8 @@
 
 
     function focusUserOnMap(docId) {
+
+        console.log("docId to focus on map:", docId);
         // Close all open InfoWindows first
         Object.values(infoWindowMap).forEach(iw => iw.close());
 
@@ -806,11 +808,10 @@
                         <span class="clickable-bus" onclick="showBusDetails('${busNo}')">${busNo}</span>
                     </td>
                     <td class="centered-cell">
-                        <a href="#" onclick="focusUserOnMap('${user.docId}'); return false;" style="color:#007bff;cursor:pointer;text-decoration:underline;">
+                        <a href="#" onclick="focusUserOnMap('${user.registration_no}'); return false;" style="color:#007bff;cursor:pointer;text-decoration:underline;">
                             ${user.name}
                         </a>
                     </td>
-                    <td class="centered-cell">${user.email}</td>
                     <td class="centered-cell">${user.distance || 'Calculating...'}</td>
                     <td class="centered-cell">${user.eta || 'Calculating...'}</td>
                     <td class="centered-cell">${user.tracking ? 'Yes' : 'No'}</td>
@@ -828,8 +829,8 @@
 
     // ---------STARTS This function plots users on the map with their start and end locations, and draws polylines for their location history. It also uses MarkerClusterer to group markers.---------
 
-    let markerMap = {};      // user.docId -> marker
-    let infoWindowMap = {};  // user.docId -> infoWindow
+    let markerMap = {};      // user.registration_no -> marker
+    let infoWindowMap = {};  // user.registration_no -> infoWindow
 
     function plotUsersOnMap() {
         markers.forEach(marker => marker.setMap(null));
@@ -862,7 +863,10 @@
                     map: map
                 });
                 markers.push(marker);
-
+                // <tr>
+                //     <td style="font-weight:bold; color:#333; padding:4px 8px;">Email</td>
+                //     <td style="padding:4px 8px;">${user.email}</td>
+                // </tr>
                 const infoContent = `
                 <div style="min-width:220px; font-family: Arial, sans-serif;">
     <table style="width:100%; border-collapse:collapse;">
@@ -882,10 +886,7 @@
             <td style="font-weight:bold; color:#333; padding:4px 8px;">Last Active At</td>
             <td style="padding:4px 8px;">${formatDateTime(user.lastActiveAt)}</td>
         </tr>
-        <tr>
-            <td style="font-weight:bold; color:#333; padding:4px 8px;">Email</td>
-            <td style="padding:4px 8px;">${user.email}</td>
-        </tr>
+
        <tr>
     <td style="font-weight:bold; color:#333; padding:4px 8px;">Bus No</td>
     <td style="padding:4px 8px;">${user.busNo && user.busNo !== "undefined" && user.busNo !== "" ? user.busNo : 'NA'}</td>
@@ -906,8 +907,8 @@
                 });
 
                 // Store marker and infoWindow for later access (use docId for uniqueness)
-                markerMap[user.docId] = marker;
-                infoWindowMap[user.docId] = infoWindow;
+                markerMap[user.registration_no] = marker;
+                infoWindowMap[user.registration_no] = infoWindow;
 
                 // Draw polyline for user's path
                 const pathCoordinates = user.locationHistory.map(loc => ({
@@ -976,6 +977,8 @@
             console.log('Connected: ' + frame);
             stompClient.subscribe('/topic/location', function (message) {
                 const updatedUser = JSON.parse(message.body);
+                console.log("Received updated user from WebSocket:", updatedUser);
+
                 updateUserInList(updatedUser);
                 displayUsersOnTable();
                 plotUsersOnMap();
@@ -988,7 +991,9 @@
 
     // Helper to update or add the user in your users array
     function updateUserInList(updatedUser) {
-        const idx = users.findIndex(u => u.docId === updatedUser.docId);
+        console.log("Received updated user:", updatedUser);
+        console.log("Current users list:", users);
+        const idx = users.findIndex(u => u.registration_no === updatedUser.registration_no);
         if (idx !== -1) {
             console.log("ye mila hai naya user ");
             console.log("all users: ", users);
@@ -1159,7 +1164,6 @@
                 <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Email</th>
                         <th>Last Active</th>
                         <th>Distance from Destination</th>
                         <th>ETA</th>
@@ -1170,7 +1174,6 @@
                     ${busUsers.map(user => `
                         <tr>
                             <td><b>${user.name}</b></td>
-                            <td>${user.email}</td>
                             <td>${formatDateTime(user.lastActiveAt) || '-'}</td>
                             <td>${user.distance || 'Calculating...'}</td>
                             <td>${user.eta || 'Calculating...'}</td>

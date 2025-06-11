@@ -202,52 +202,6 @@ public class DataServiceImpl implements DataService {
 
 
     //---------------------------START OF MASTER DATA IMPORT SERVICE---------------------
-
-//    @Override
-//    public Map<String, Object> importMasterDataFromCsv(MultipartFile file) {
-//        List<Map<String, Object>> importedData = new ArrayList<>();
-//        List<String> failedRecords = new ArrayList<>();
-//        int successCount = 0;
-//        int failureCount = 0;
-//
-//        try (Reader reader = new InputStreamReader(file.getInputStream())) {
-//            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
-//            CollectionReference collection = firestore.collection("masterData");
-//
-//            for (CSVRecord record : records) {
-//                Map<String, Object> data = new HashMap<>();
-//                for (String header : record.toMap().keySet()) {
-//                    data.put(header, record.get(header));
-//                }
-//                try {
-//                    String registrationNo = record.get("Registration No.");
-//                    DocumentReference docRef = collection.document(registrationNo);
-//                    ApiFuture<WriteResult> future = docRef.set(data);
-//                    future.get();
-//                    importedData.add(data);
-//                    successCount++;
-//                } catch (Exception ex) {
-//                    failureCount++;
-//                    failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
-//                    ex.printStackTrace();
-//                }
-//            }
-//
-//        } catch (Exception e) {
-//
-//            log.error("Error processing CSV file: {}", e.getMessage());
-//        }
-//
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("successCount", successCount);
-//        response.put("failureCount", failureCount);
-//        response.put("failedRecords", failedRecords);
-//        response.put("importedData", importedData);
-//
-//        return response;
-//    }
-
-
     @Override
     public Map<String, Object> importMasterDataFromCsv(MultipartFile file) {
         List<Map<String, Object>> importedData = new ArrayList<>();
