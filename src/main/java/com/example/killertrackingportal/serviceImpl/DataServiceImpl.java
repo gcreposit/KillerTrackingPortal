@@ -11,6 +11,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
@@ -97,7 +100,7 @@ public class DataServiceImpl implements DataService {
                 notificationList.add(data);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return notificationList;
     }
@@ -126,7 +129,7 @@ public class DataServiceImpl implements DataService {
                     file.transferTo(destinationFile);
 
                     // Save relative path in the database (relative to the images folder)
-                    relativePaths.append("/images/").append(fileName).append("; ");
+                    relativePaths.append("/Land_Details/").append(fileName).append("; ");
                 } catch (IOException e) {
                     return "Error while saving image: " + e.getMessage();
                 }
@@ -200,6 +203,51 @@ public class DataServiceImpl implements DataService {
 
     //---------------------------START OF MASTER DATA IMPORT SERVICE---------------------
 
+//    @Override
+//    public Map<String, Object> importMasterDataFromCsv(MultipartFile file) {
+//        List<Map<String, Object>> importedData = new ArrayList<>();
+//        List<String> failedRecords = new ArrayList<>();
+//        int successCount = 0;
+//        int failureCount = 0;
+//
+//        try (Reader reader = new InputStreamReader(file.getInputStream())) {
+//            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
+//            CollectionReference collection = firestore.collection("masterData");
+//
+//            for (CSVRecord record : records) {
+//                Map<String, Object> data = new HashMap<>();
+//                for (String header : record.toMap().keySet()) {
+//                    data.put(header, record.get(header));
+//                }
+//                try {
+//                    String registrationNo = record.get("Registration No.");
+//                    DocumentReference docRef = collection.document(registrationNo);
+//                    ApiFuture<WriteResult> future = docRef.set(data);
+//                    future.get();
+//                    importedData.add(data);
+//                    successCount++;
+//                } catch (Exception ex) {
+//                    failureCount++;
+//                    failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
+//                    ex.printStackTrace();
+//                }
+//            }
+//
+//        } catch (Exception e) {
+//
+//            log.error("Error processing CSV file: {}", e.getMessage());
+//        }
+//
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("successCount", successCount);
+//        response.put("failureCount", failureCount);
+//        response.put("failedRecords", failedRecords);
+//        response.put("importedData", importedData);
+//
+//        return response;
+//    }
+
+
     @Override
     public Map<String, Object> importMasterDataFromCsv(MultipartFile file) {
         List<Map<String, Object>> importedData = new ArrayList<>();
@@ -207,31 +255,75 @@ public class DataServiceImpl implements DataService {
         int successCount = 0;
         int failureCount = 0;
 
-        try (Reader reader = new InputStreamReader(file.getInputStream())) {
-            Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
+        try {
+            String filename = file.getOriginalFilename();
             CollectionReference collection = firestore.collection("masterData");
 
-            for (CSVRecord record : records) {
-                Map<String, Object> data = new HashMap<>();
-                for (String header : record.toMap().keySet()) {
-                    data.put(header, record.get(header));
+            if (filename != null && filename.toLowerCase().endsWith(".xlsx")) {
+                // Handle Excel (.xlsx)
+                Workbook workbook = new XSSFWorkbook(file.getInputStream());
+                Sheet sheet = workbook.getSheetAt(0);
+                Row headerRow = sheet.getRow(0);
+                List<String> headers = new ArrayList<>();
+                for (Cell cell : headerRow) {
+                    headers.add(cell.getStringCellValue());
                 }
-
-                try {
-                    DocumentReference docRef = collection.document();
-                    ApiFuture<WriteResult> future = docRef.set(data);
-                    future.get();
-                    importedData.add(data);
-                    successCount++;
-                } catch (Exception ex) {
-                    failureCount++;
-                    failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
-                    ex.printStackTrace();
+                for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                    Row row = sheet.getRow(i);
+                    if (row == null) continue;
+                    Map<String, Object> data = new HashMap<>();
+                    for (int j = 0; j < headers.size(); j++) {
+                        Cell cell = row.getCell(j);
+                        String value = "";
+                        if (cell != null) {
+                            if (cell.getCellType() == CellType.NUMERIC) {
+                                value = BigDecimal.valueOf(cell.getNumericCellValue()).toPlainString();
+                            } else {
+                                value = cell.toString();
+                            }
+                        }
+                        data.put(headers.get(j), value);
+                    }
+                    try {
+                        String registrationNo = data.get("Registration No.").toString();
+                        DocumentReference docRef = collection.document(registrationNo);
+                        ApiFuture<WriteResult> future = docRef.set(data);
+                        future.get();
+                        importedData.add(data);
+                        successCount++;
+                    } catch (Exception ex) {
+                        failureCount++;
+                        failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                }
+                workbook.close();
+            } else {
+                // Handle CSV
+                try (Reader reader = new InputStreamReader(file.getInputStream())) {
+                    Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(reader);
+                    for (CSVRecord record : records) {
+                        Map<String, Object> data = new HashMap<>();
+                        for (String header : record.toMap().keySet()) {
+                            data.put(header, record.get(header));
+                        }
+                        try {
+                            String registrationNo = record.get("Registration No.");
+                            DocumentReference docRef = collection.document(registrationNo);
+                            ApiFuture<WriteResult> future = docRef.set(data);
+                            future.get();
+                            importedData.add(data);
+                            successCount++;
+                        } catch (Exception ex) {
+                            failureCount++;
+                            failedRecords.add("Failed record: " + data + " | Reason: " + ex.getMessage());
+                            ex.printStackTrace();
+                        }
+                    }
                 }
             }
-
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing file: {}", e.getMessage());
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -242,7 +334,6 @@ public class DataServiceImpl implements DataService {
 
         return response;
     }
-
 
 }
 

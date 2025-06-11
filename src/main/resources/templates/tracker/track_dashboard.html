@@ -187,6 +187,212 @@
                 width: 250px;
             }
         }
+
+        /* Bus Details Modal Styles */
+        .bus-details-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bus-details-content {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 24px;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .bus-details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .bus-details-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .bus-details-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.3s;
+        }
+
+        .bus-details-close:hover {
+            color: #333;
+        }
+
+        .bus-details-grid {
+            /* Remove grid for table layout */
+            display: block;
+            margin-top: 20px;
+        }
+        .bus-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8f9fa;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .bus-details-table th, .bus-details-table td {
+            padding: 14px 12px;
+            text-align: left;
+            font-size: 15px;
+        }
+        .bus-details-table th {
+            background: #f1f1f1;
+            color: #333;
+            font-weight: 700;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .bus-details-table tr:not(:last-child) td {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .bus-details-table td {
+            color: #444;
+        }
+        .bus-user-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 0;
+        }
+        .status-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-inactive {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .clickable-bus {
+            color: #007bff;
+            cursor: pointer;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+
+        .clickable-bus:hover {
+            color: #0056b3;
+        }
+
+        .upload-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .upload-modal-content {
+            background: #fff;
+            border-radius: 16px;
+            width: 400px;
+            max-width: 95vw;
+            padding: 32px 28px 24px 28px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 18px;
+        }
+        .upload-modal-close {
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 32px;
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.2s;
+        }
+        .upload-modal-close:hover {
+            color: #333;
+        }
+        .upload-modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .upload-modal-label {
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: #444;
+        }
+        .upload-modal-input {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .upload-modal-btn {
+            background: #2196F3;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+        .upload-modal-btn:hover {
+            background: #1769aa;
+        }
+        .upload-modal-feedback {
+            margin-top: 10px;
+            font-size: 15px;
+            text-align: center;
+        }
+        .upload-modal-progress {
+            margin-top: 8px;
+            width: 100%;
+            height: 6px;
+            background: #e3e3e3;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .upload-modal-progress-bar {
+            height: 100%;
+            background: #2196F3;
+            width: 0;
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
@@ -201,9 +407,9 @@
     <thead>
     <tr>
         <th class="centered-cell">S.No</th>
+        <th class="centered-cell">Bus No</th>
         <th class="centered-cell">Officer Name</th>
         <th class="centered-cell">Email</th>
-        <th class="centered-cell">Bus No</th>
         <th class="centered-cell">Distance From Destination</th>
         <th class="centered-cell">ETA</th>
         <th class="centered-cell">Tracking</th>
@@ -217,6 +423,8 @@
 </table>
 
 <div id="hourFilters"></div>
+<!--<div id="imageContainer"></div>-->
+
 
 <!-- Filter Button (Timer Icon) -->
 <button class="fab" onclick="toggleFilters()" style="right: 20px; background: #4CAF50;" title="Filter by Hours">
@@ -230,7 +438,7 @@
 </button>
 
 <!---------------------MODAL OF EXCEL Upload Button (Upload Icon) ---------------->
-<button class="fab" id="masterDataUpload" onclick="openMasterDataModal()" style="right: 160px; background: #2196F3;"
+<button class="fab" id="masterDataUpload"  style="right: 160px; background: #2196F3;"
         title="Upload CSV or Data">
     <span class="material-icons-outlined">upload</span>
 </button>
@@ -351,6 +559,34 @@
                 Close
             </button>
         </div>
+    </div>
+</div>
+
+<!-- Add this before the closing body tag -->
+<div id="busDetailsModal" class="bus-details-modal">
+    <div class="bus-details-content">
+        <div class="bus-details-header">
+            <h2 class="bus-details-title">Bus Details</h2>
+            <button class="bus-details-close" onclick="closeBusDetailsModal()">&times;</button>
+        </div>
+        <div id="busDetailsContent" class="bus-details-grid">
+            <!-- Content will be dynamically populated -->
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="upload-modal">
+    <div class="upload-modal-content">
+        <button class="upload-modal-close" onclick="closeUploadModal()">&times;</button>
+        <div class="upload-modal-title">Upload Master Data (CSV/Excel)</div>
+        <label class="upload-modal-label" for="masterDataFile">Select File (.csv, .xls, .xlsx):</label>
+        <input class="upload-modal-input" type="file" id="masterDataFile" accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <button class="upload-modal-btn" onclick="uploadMasterData()">Upload</button>
+        <div class="upload-modal-progress" id="uploadProgress" style="display:none;">
+            <div class="upload-modal-progress-bar" id="uploadProgressBar"></div>
+        </div>
+        <div class="upload-modal-feedback" id="uploadFeedback"></div>
     </div>
 </div>
 
@@ -555,44 +791,37 @@
 
     function displayUsersOnTable() {
         const tableBody = document.getElementById('userTableBody');
-
-        // Clear the existing table data
         tableBody.innerHTML = '';
 
-        // Ensure we are properly checking for the user data before inserting
         if (users.length > 0) {
-            // showUserPopup(users[0]);
-
-            // Loop through the users and add rows
             users.forEach((user, index) => {
                 const tr = document.createElement('tr');
-
-                // Set background color based on user tracking status
-                const statusColor = user.tracking ? 'lightgreen' : 'lightcoral'; // lightgreen for active, lightcoral for inactive
-                const statusText = user.tracking ? 'ACTIVE' : 'INACTIVE'; // Status text
+                const statusColor = user.tracking ? 'lightgreen' : 'lightcoral';
+                const statusText = user.tracking ? 'ACTIVE' : 'INACTIVE';
                 const busNo = user.busNo ? user.busNo : 'NA';
 
                 tr.innerHTML = `
-            <td class="centered-cell">${index + 1}</td>
- <td class="centered-cell">
-        <a href="#" onclick="focusUserOnMap('${user.docId}'); return false;" style="color:#007bff;cursor:pointer;text-decoration:underline;">
-            ${user.name}
-        </a>
-    </td>            <td class="centered-cell">${user.email}</td>
-            <td class="centered-cell">${busNo}</td>
-            <td class="centered-cell">${user.distance || 'Calculating...'}</td>
-            <td class="centered-cell">${user.eta || 'Calculating...'}</td>
-            <td class="centered-cell">${user.tracking ? 'Yes' : 'No'}</td>
-<td class="centered-cell">${formatDateTime(user.lastActiveAt) || '-'}</td>
-  <td class="centered-cell" style="background-color: ${statusColor};">${statusText}</td>
-
-        `;
+                    <td class="centered-cell">${index + 1}</td>
+                    <td class="centered-cell">
+                        <span class="clickable-bus" onclick="showBusDetails('${busNo}')">${busNo}</span>
+                    </td>
+                    <td class="centered-cell">
+                        <a href="#" onclick="focusUserOnMap('${user.docId}'); return false;" style="color:#007bff;cursor:pointer;text-decoration:underline;">
+                            ${user.name}
+                        </a>
+                    </td>
+                    <td class="centered-cell">${user.email}</td>
+                    <td class="centered-cell">${user.distance || 'Calculating...'}</td>
+                    <td class="centered-cell">${user.eta || 'Calculating...'}</td>
+                    <td class="centered-cell">${user.tracking ? 'Yes' : 'No'}</td>
+                    <td class="centered-cell">${formatDateTime(user.lastActiveAt) || '-'}</td>
+                    <td class="centered-cell" style="background-color: ${statusColor};">${statusText}</td>
+                `;
                 tableBody.appendChild(tr);
             });
         } else {
-            // If no users found, add a message to the table
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="5" style="text-align: center;">No users found</td>`;
+            tr.innerHTML = `<td colspan="9" style="text-align: center;">No users found</td>`;
             tableBody.appendChild(tr);
         }
     }
@@ -780,6 +1009,7 @@
         const totalBuses = allBuses.length;
         const totalUniqueBuses = uniqueBuses.length;
 
+        // <div><b>Total Officers Tracked:</b> ${totalUsers}</div>
         // Card HTML
         document.getElementById('summaryCard').innerHTML = `
         <div style="
@@ -794,13 +1024,40 @@
             margin-bottom:12px;
             flex-wrap:wrap;
         ">
-            <div><b>Total Officers Tracked:</b> ${totalUsers}</div>
-            <div><b>Current Active Officer:</b> <span style="color:#388e3c;font-weight:bold;">${totalActive}</span></div>
-            <div><b>Current Inactive Officer:</b> <span style="color:#d32f2f;font-weight:bold;">${totalInactive}</span></div>
+
+            <div><b>Current Active Buses:</b> <span style="color:#388e3c;font-weight:bold;">${totalActive}</span></div>
+            <div><b>Current Inactive Buses:</b> <span style="color:#d32f2f;font-weight:bold;">${totalInactive}</span></div>
             <div><b>Total Buses Monitored:</b> ${totalUniqueBuses}</div>
         </div>
     `;
     }
+    // SAMARTH --------------
+    // fetch('/data/fetchAllFormData')
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         console.log("Fetched data:", data);
+    //         data.forEach(item => {
+    //             item.imageData.forEach((imageData, index) => {
+    //                 // Get the base64 string of the image
+    //                 const base64String = `data:image/png;base64,${imageData}`;
+    //
+    //                 // Create an img element and set the src to the base64 image
+    //                 const imgElement = document.createElement('img');
+    //                 imgElement.src = base64String;
+    //                 imgElement.alt = `Image ${index + 1}`; // Image index as alt text
+    //                 imgElement.style.margin = "5px";
+    //
+    //                 // Optionally, display the image index as a label
+    //                 const label = document.createElement('div');
+    //                 label.innerText = `Image ${index + 1}`;
+    //
+    //                 // Append the image and label to the DOM (e.g., to a container element)
+    //                 const container = document.getElementById('imageContainer');
+    //                 container.appendChild(label);
+    //                 container.appendChild(imgElement);
+    //             });
+    //         });
+    //     });
 
 
 </script>
@@ -879,6 +1136,134 @@
             closeModal();
         });
     }
+
+    function showBusDetails(busNo) {
+        const modal = document.getElementById('busDetailsModal');
+        const content = document.getElementById('busDetailsContent');
+        const title = document.querySelector('.bus-details-title');
+        
+        // Filter users for this bus
+        const busUsers = users.filter(user => user.busNo === busNo);
+        
+        // Update modal title
+        title.textContent = `Bus ${busNo} Details`;
+        
+        // Clear previous content
+        content.innerHTML = '';
+        
+        if (busUsers.length > 0) {
+            // Create table
+            const table = document.createElement('table');
+            table.className = 'bus-details-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Last Active</th>
+                        <th>Distance from Destination</th>
+                        <th>ETA</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${busUsers.map(user => `
+                        <tr>
+                            <td><b>${user.name}</b></td>
+                            <td>${user.email}</td>
+                            <td>${formatDateTime(user.lastActiveAt) || '-'}</td>
+                            <td>${user.distance || 'Calculating...'}</td>
+                            <td>${user.eta || 'Calculating...'}</td>
+                            <td><span class="bus-user-status ${user.tracking ? 'status-active' : 'status-inactive'}">${user.tracking ? 'ACTIVE' : 'INACTIVE'}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            content.appendChild(table);
+        } else {
+            content.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No users found for this bus.</div>';
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    function closeBusDetailsModal() {
+        document.getElementById('busDetailsModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('busDetailsModal');
+        if (event.target === modal) {
+            closeBusDetailsModal();
+        }
+    }
+</script>
+
+<script>
+// Upload Modal Logic
+function openUploadModal() {
+    document.getElementById('uploadModal').style.display = 'flex';
+    document.getElementById('masterDataFile').value = '';
+    document.getElementById('uploadFeedback').textContent = '';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadProgressBar').style.width = '0';
+}
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+}
+document.getElementById('masterDataUpload').onclick = openUploadModal;
+
+function uploadMasterData() {
+    const fileInput = document.getElementById('masterDataFile');
+    const feedback = document.getElementById('uploadFeedback');
+    const progress = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('uploadProgressBar');
+    feedback.textContent = '';
+    progress.style.display = 'block';
+    progressBar.style.width = '0';
+
+    const file = fileInput.files[0];
+    if (!file) {
+        feedback.textContent = 'Please select a file.';
+        progress.style.display = 'none';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/data/addMasterData', true);
+    xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+        }
+    };
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            feedback.textContent = 'Upload successful!';
+            feedback.style.color = '#2e7d32';
+        } else {
+            feedback.textContent = 'Upload failed. Please try again.';
+            feedback.style.color = '#c62828';
+        }
+        progressBar.style.width = '100%';
+    };
+    xhr.onerror = function() {
+        feedback.textContent = 'Upload failed. Please try again.';
+        feedback.style.color = '#c62828';
+        progress.style.display = 'none';
+    };
+    xhr.send(formData);
+}
+// Close modal on outside click
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('uploadModal');
+    if (event.target === modal) {
+        closeUploadModal();
+    }
+});
 </script>
 </body>
 </html>

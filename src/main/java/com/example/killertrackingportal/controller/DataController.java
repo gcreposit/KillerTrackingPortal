@@ -69,16 +69,18 @@ public class DataController {
     }
 
 
-    @PostMapping(path = "/saveFormData",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/saveFormData", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> saveFormData(@ModelAttribute Uppneda uppneda) {
-        String message=dataService.saveFormData(uppneda);
+        String message = dataService.saveFormData(uppneda);
         return ResponseEntity.ok(message);
     }
 
 
     @GetMapping("/fetchAllFormData")
-    public  List<Uppneda> fetchAllFormData() {
-        List<Uppneda> allData  = dataService.fetchAllFormData();
+    public List<Uppneda> fetchAllFormData() {
+        List<Uppneda> allData = dataService.fetchAllFormData();
+
+
         // Convert image paths to byte arrays for images
         // Convert image paths to byte arrays for images
         for (Uppneda data : allData) {
@@ -150,7 +152,6 @@ public class DataController {
         }
         return new byte[0];
     }
-
 
 
 }
