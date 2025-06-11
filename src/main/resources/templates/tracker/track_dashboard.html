@@ -847,19 +847,20 @@
             if (user.locationHistory && user.locationHistory.length > 0) {
                 const endLocation = user.locationHistory[user.locationHistory.length - 1];
 
-                const activeIcon = {
-                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="green" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">A</text></svg>',
-                    scaledSize: new google.maps.Size(24, 24),
+                // Use a bus icon for all markers
+                const busActiveIcon = {
+                    url: '/images/ACTIVE_BUS.png', // Make sure this image exists in your static/images folder
+                    scaledSize: new google.maps.Size(40, 40),
                 };
-                const inactiveIcon = {
-                    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="red" /><text x="12" y="16" font-size="12" text-anchor="middle" fill="white">I</text></svg>',
-                    scaledSize: new google.maps.Size(24, 24),
+                const busInActiveIcon = {
+                    url: '/images/INACTIVE_BUS.png', // Make sure this image exists in your static/images folder
+                    scaledSize: new google.maps.Size(40, 40),
                 };
 
                 const marker = new google.maps.Marker({
                     position: {lat: endLocation.latitude, lng: endLocation.longitude},
                     title: `Officer - ${user.name}`,
-                    icon: user.tracking ? activeIcon : inactiveIcon,
+                    icon: user.tracking ? busActiveIcon : busInActiveIcon,
                     map: map
                 });
                 markers.push(marker);
@@ -991,13 +992,33 @@
 
     // Helper to update or add the user in your users array
     function updateUserInList(updatedUser) {
-        console.log("Received updated user:", updatedUser);
-        console.log("Current users list:", users);
         const idx = users.findIndex(u => u.registration_no === updatedUser.registration_no);
         if (idx !== -1) {
-            console.log("ye mila hai naya user ");
-            console.log("all users: ", users);
-            users[idx] = updatedUser;
+            // Merge location history
+            const existingUser = users[idx];
+            const existingHistory = existingUser.locationHistory || [];
+            const newHistory = updatedUser.locationHistory || [];
+
+            // Merge and deduplicate by timestamp (assuming timestamp is unique)
+            const allHistory = [...existingHistory, ...newHistory];
+            // Remove duplicates
+            const seen = new Set();
+            const uniqueHistory = [];
+            for (const loc of allHistory) {
+                if (!loc.timestamp || !seen.has(loc.timestamp)) {
+                    uniqueHistory.push(loc);
+                    if (loc.timestamp) seen.add(loc.timestamp);
+                }
+            }
+            // Sort by timestamp ascending
+            uniqueHistory.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // Update user
+            users[idx] = {
+                ...existingUser,
+                ...updatedUser,
+                locationHistory: uniqueHistory
+            };
         } else {
             users.push(updatedUser);
         }
