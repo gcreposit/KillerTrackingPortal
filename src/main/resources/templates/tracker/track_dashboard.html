@@ -847,6 +847,22 @@
             if (user.locationHistory && user.locationHistory.length > 0) {
                 const endLocation = user.locationHistory[user.locationHistory.length - 1];
 
+                // Add a pin at the previous location (if exists)
+                const historyLength = user.locationHistory.length;
+                if (historyLength > 1) {
+                    const prevLoc = user.locationHistory[historyLength - 2];
+                    const pinIcon = {
+                        url: '/images/LAST_PINNED_BUS_LOCATION.png', // Use your pin icon here
+                        scaledSize: new google.maps.Size(32, 32),
+                    };
+                    const pinMarker = new google.maps.Marker({
+                        position: { lat: prevLoc.latitude, lng: prevLoc.longitude },
+                        icon: pinIcon,
+                        map: map
+                    });
+                    markers.push(pinMarker); // So you can clear it later
+                }
+
                 // Use a bus icon for all markers
                 const busActiveIcon = {
                     url: '/images/ACTIVE_BUS.png', // Make sure this image exists in your static/images folder
