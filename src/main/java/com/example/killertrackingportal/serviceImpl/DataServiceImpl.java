@@ -285,7 +285,7 @@ public class DataServiceImpl implements DataService {
                         data.put(headers.get(j), value);
                     }
                     try {
-                        String registrationNo = data.get("Registration No.").toString();
+                        String registrationNo = data.get("registration_no").toString();
                         DocumentReference docRef = collection.document(registrationNo);
                         ApiFuture<WriteResult> future = docRef.set(data);
                         future.get();
@@ -308,7 +308,7 @@ public class DataServiceImpl implements DataService {
                             data.put(header, record.get(header));
                         }
                         try {
-                            String registrationNo = record.get("Registration No.");
+                            String registrationNo = record.get("registration_no");
                             DocumentReference docRef = collection.document(registrationNo);
                             ApiFuture<WriteResult> future = docRef.set(data);
                             future.get();
